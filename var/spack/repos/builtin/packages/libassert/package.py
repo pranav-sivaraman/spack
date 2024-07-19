@@ -18,9 +18,9 @@ class Libassert(CMakePackage):
 
     version("2.1.0", sha256="e42405b49cde017c44c78aacac35c6e03564532838709031e73d10ab71f5363d")
 
-    variant("shared", default=False, description="Build shared libs")
+    variant("shared", default=True, description="Build shared libs")
     variant("sanitizers", default=False, description="Build with sanitizers")
-    variant("magic-enum", default=False, description="Use magic_enum library to print better diagnostics for enum classes")
+    variant("magic-enum", default=True, description="Use magic_enum library to print better diagnostics for enum classes")
 
     depends_on("c", type="build")
     depends_on("cxx", type="build")
