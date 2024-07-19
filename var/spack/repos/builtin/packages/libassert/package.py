@@ -21,7 +21,6 @@ class Libassert(CMakePackage):
     variant("shared", default=False, description="Build shared libs")
     variant("sanitizers", default=False, description="Build with sanitizers")
     variant("magic-enum", default=False, description="Use magic_enum library to print better diagnostics for enum classes")
-    # variant("tests", default=False, description="Enable tests")
 
     depends_on("c", type="build")
     depends_on("cxx", type="build")
@@ -37,7 +36,6 @@ class Libassert(CMakePackage):
         
         args = [
             from_variant("BUILD_SHARED_LIBS", "shared"),
-            # from_variant("LIBASSERT_BUILD_TESTING", "tests"),
             from_variant("LIBASSERT_SANITIZER_BUILD", "sanitizers"),
             from_variant("LIBASSERT_USE_MAGIC_ENUM", "magic-enum"),
             define("LIBASSERT_USE_EXTERNAL_MAGIC_ENUM", "ON"),
