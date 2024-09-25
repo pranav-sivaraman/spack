@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 from spack.package import *
+from spack.variant import _a_single_value_or_a_combination
 
 
 class LlvmRedux(CMakePackage):
@@ -66,72 +67,69 @@ class LlvmRedux(CMakePackage):
         multi=True,
     )
 
-    # TODO: make default a mapping of Spack Host Arch -> Target
     variant(
         "targets",
-        default="AArch64",
         description="",
         values=(
-            "AArch64",
-            "AMDGPU",
-            "ARM",
-            "AVR",
-            "BPF",
-            "Hexagon",
-            "Lanai",
-            "LoongArch",
-            "Mips",
-            "MSP430",
-            "NVPTX",
-            "PowerPC",
-            "RISCV",
-            "Sparc",
-            "SystemZ",
-            "VE",
-            "WebAssembly",
-            "X86",
-            "XCore",
+            _a_single_value_or_a_combination(
+                "all",
+                *(
+                    "AArch64",
+                    "AMDGPU",
+                    "ARM",
+                    "AVR",
+                    "BPF",
+                    "Hexagon",
+                    "Lanai",
+                    "LoongArch",
+                    "Mips",
+                    "MSP430",
+                    "NVPTX",
+                    "PowerPC",
+                    "RISCV",
+                    "Sparc",
+                    "SystemZ",
+                    "VE",
+                    "WebAssembly",
+                    "X86",
+                    "XCore",
+                ),
+            )
         ),
-        multi=True,
     )
 
     variant(
         "experimental-targets",
-        default="none",
         description="",
-        values=("ARC", "CSKY", "DirectX", "M68k", "SPIRV", "Xtensa", "none"),
-        multi=True,
+        values=any_combination_of("ARC", "CSKY", "DirectX", "M68k", "SPIRV", "Xtensa"),
     )
 
     # TODO: Add conflicts with LLVM
-    # TODO: make default a mapping of Spack Host Arch -> Target
     variant(
         "bolt-targets",
-        default="AArch64",
         description="",
-        values=("AArch64", "X86", "RISCV"),
-        multi=True,
-        when="projects=bolt"
+        values=_a_single_value_or_a_combination("all", *("AArch64", "X86", "RISCV")),
+        when="projects=bolt",
     )
 
-    # TODO: add when clause
-    # TODO: add default (which is all)
     variant(
         "libclc-targets",
-        default="none", # TODO: this is wrong
         description="",
-        values=(
-            "amdgcn--",
-            "amdgcn--amdhsa",
-            "clspv--",
-            "clspv64--",
-            "r600--",
-            "nvptx--",
-            "nvptx64--",
-            "nvptx--nvidiacl",
-            "nvptx64--nvidiacl",
+        values=_a_single_value_or_a_combination(
+            "all",
+            *(
+                "amdgcn--",
+                "amdgcn--amdhsa",
+                "clspv--",
+                "clspv64--",
+                "r600--",
+                "nvptx--",
+                "nvptx64--",
+                "nvptx--nvidiacl",
+                "nvptx64--nvidiacl",
+            ),
         ),
-        multi=True,
+        when="projects=libclc",
     )
 
     # LLVM
@@ -151,15 +149,16 @@ class LlvmRedux(CMakePackage):
 
     # clang
 
-    # TODO: add runtimes case
+    # TODO: Need OR syntax
     # pstl
-    with when("projects=pstl"):
+    for condition in ("projects=pstl", "runtimes=pstl"):
         variant(
             "pstl-backend",
             default="serial",
             description="",
             values=("serial", "tbb", "omp"),
             multi=False,
+            when=condition,
         )
 
     # TODO: add cxxstd
@@ -200,14 +199,26 @@ class LlvmRedux(CMakePackage):
 
         projects = ";".join(spec.variants["projects"].value)
         runtimes = ";".join(spec.variants["runtimes"].value)
-        targets = ";".join(spec.variants["targets"].value)
-        # TODO: handle experimental targets and handle empty case
-
+        
+        if spec.variants["targets"].value == "all":
+            targets = "all"
+        else:
+            targets = ";".join(spec.variants["targets"].value)
+        
+        # TODO: simplify to checking the list
+        if spec.variants["experimental-targets"].value == "all":
+            experimental_targets = "all"
+        elif spec.variants["experimental-targets"].value == "none":
+            experimental_targets = ""
+        else:
+            experimental_targets = ";".join(spec.variants["experimental-targets"].value)
+            
         # LLVM
         args = [
             define("LLVM_ENABLE_PROJECTS", projects),
             define("LLVM_ENABLE_RUNTIMES", runtimes),
             define("LLVM_TARGETS_TO_BUILD", targets),
+            define("LLVM_EXPERIMENTAL_TARGETS_TO_BUILD", experimental_targets),
             from_variant("LLVM_ENABLE_FFI", "ffi"),
             from_variant("LLVM_ENABLE_LIBXML2", "libxml2"),
             from_variant("LLVM_ENABLE_LIBEDIT", "libedit"),
@@ -220,7 +231,10 @@ class LlvmRedux(CMakePackage):
             define("LLVM_INCLUDE_TESTS", self.run_tests),
         ]
 
-        bolt_targets = ";".join(spec.variants["bolt-targets"].value)
+        if spec.variants["bolt-targets"].value == "all":
+            bolt_targets = "all"
+        else:
+            bolt_targets = ";".join(spec.variants["bolt-targets"].value)
 
         # bolt
         args.extend(
